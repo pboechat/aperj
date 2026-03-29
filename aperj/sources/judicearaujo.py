@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from aperj.models import Listing
+from aperj.models import Listing, parse_price_brl
 from aperj.sources.base import BaseSource
 
 
@@ -29,6 +29,9 @@ class JudiceAraujoSource(BaseSource):
             title_el = card.select_one("span.font-bold")
             addr_el = card.select_one("span.text-xs.text-grey-350")
 
+            price_el = card.select_one("span.font-semibold.text-base")
+            price_brl = parse_price_brl(price_el.get_text(strip=True) if price_el else "")
+
             bedrooms = bathrooms = area = parking = ""
             for feat_div in card.select("div[id]"):
                 span = feat_div.select_one("span.font-small-3")
@@ -49,6 +52,7 @@ class JudiceAraujoSource(BaseSource):
             listings.append(Listing(
                 title=title_el.get_text(strip=True) if title_el else "",
                 address=addr_el.get_text(strip=True) if addr_el else "",
+                price_brl=price_brl,
                 area_m2=area,
                 bedrooms=bedrooms,
                 bathrooms=bathrooms,

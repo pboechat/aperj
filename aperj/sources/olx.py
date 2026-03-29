@@ -15,25 +15,30 @@ class OlxSource(BaseSource):
     base_url = "https://www.olx.com.br"
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
-        query = " ".join(keywords)
-        url = (
-            f"{self.base_url}/imoveis/venda/estado-rj/rio-de-janeiro-e-regiao"
-        )
-        if query:
-            url += f"?q={quote_plus(query)}"
+        base = f"{self.base_url}/imoveis/venda/estado-rj/rio-de-janeiro-e-regiao"
+        queries = keywords or [""]
+        all_listings: list[Listing] = []
+        seen_urls: set[str] = set()
 
         async with self._build_session() as session:
-            html = await self._fetch(session, url)
+            for kw in queries:
+                url = f"{base}?q={quote_plus(kw)}" if kw else base
+                html = await self._fetch(session, url)
+                soup = self._soup(html)
 
-        soup = self._soup(html)
+                # OLX is a Next.js app – structured data lives in __NEXT_DATA__.
+                next_data = soup.select_one("script#__NEXT_DATA__")
+                if next_data and next_data.string:
+                    batch = self._parse_next_data(json.loads(next_data.string))
+                else:
+                    batch = self._parse_html(soup)
 
-        # OLX is a Next.js app – structured data lives in __NEXT_DATA__.
-        next_data = soup.select_one("script#__NEXT_DATA__")
-        if next_data and next_data.string:
-            return self._parse_next_data(json.loads(next_data.string))
+                for listing in batch:
+                    if listing.url not in seen_urls:
+                        seen_urls.add(listing.url)
+                        all_listings.append(listing)
 
-        # Fallback: CSS selectors (legacy, unlikely to work).
-        return self._parse_html(soup)
+        return all_listings
 
     def _parse_next_data(self, data: dict[str, Any]) -> list[Listing]:
         ads = data.get("props", {}).get("pageProps", {}).get("ads", [])

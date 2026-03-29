@@ -34,7 +34,21 @@ class VivaRealSource(BaseSource):
     _API = "https://glue-api.vivareal.com/v2/listings"
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
-        query = " ".join(keywords)
+        queries = keywords or [""]
+        all_listings: list[Listing] = []
+        seen_urls: set[str] = set()
+
+        for kw in queries:
+            batch = await self._scrape_one(kw)
+            for listing in batch:
+                if listing.url not in seen_urls:
+                    seen_urls.add(listing.url)
+                    all_listings.append(listing)
+
+        return all_listings
+
+    async def _scrape_one(self, keyword: str) -> list[Listing]:
+        query = keyword
         params = (
             f"?business=SALE"
             f"&listingType=USED"
@@ -55,7 +69,7 @@ class VivaRealSource(BaseSource):
             try:
                 data: dict[str, Any] = await self._fetch_json(session, url)
             except Exception:
-                return await self._scrape_html(session, keywords)
+                return await self._scrape_html(session, keyword)
 
         return self._parse_api(data)
 

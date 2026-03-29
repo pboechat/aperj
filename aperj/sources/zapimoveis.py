@@ -16,28 +16,34 @@ class ZapImoveisSource(BaseSource):
     base_url = "https://www.zapimoveis.com.br"
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
-        query = "+".join(quote_plus(k) for k in keywords) if keywords else ""
-        url = f"{self.base_url}/venda/imoveis/rj+rio-de-janeiro/"
-        if query:
-            url += f"?q={query}"
+        base = f"{self.base_url}/venda/imoveis/rj+rio-de-janeiro/"
+        queries = keywords or [""]
+        all_listings: list[Listing] = []
+        seen_urls: set[str] = set()
 
         async with self._build_session() as session:
-            html = await self._fetch(session, url)
+            for kw in queries:
+                url = f"{base}?palavra-chave={quote_plus(kw)}" if kw else base
+                html = await self._fetch(session, url)
+                soup = self._soup(html)
 
-        soup = self._soup(html)
+                # ZAP embeds structured JSON-LD (schema.org ItemList) in the HTML.
+                for script in soup.find_all("script"):
+                    text = script.string or ""
+                    if text.startswith("{") and '"ItemList"' in text[:200]:
+                        try:
+                            data = _json.loads(text)
+                            if data.get("@type") == "ItemList":
+                                batch = self._parse_jsonld(data)
+                                for listing in batch:
+                                    if listing.url not in seen_urls:
+                                        seen_urls.add(listing.url)
+                                        all_listings.append(listing)
+                                break
+                        except (ValueError, KeyError):
+                            continue
 
-        # ZAP embeds structured JSON-LD (schema.org ItemList) in the HTML.
-        for script in soup.find_all("script"):
-            text = script.string or ""
-            if text.startswith("{") and '"ItemList"' in text[:200]:
-                try:
-                    data = _json.loads(text)
-                    if data.get("@type") == "ItemList":
-                        return self._parse_jsonld(data)
-                except (ValueError, KeyError):
-                    continue
-
-        return []
+        return all_listings
 
     # Pattern: "… em Neighbourhood, City"
     _NEIGHBOURHOOD_RE = re.compile(r"\bem\s+(.+?),\s*[^,]+$")

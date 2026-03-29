@@ -14,17 +14,28 @@ class MercadoLivreSource(BaseSource):
     base_url = "https://imoveis.mercadolivre.com.br"
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
-        query = " ".join(keywords)
-        url = (
-            f"{self.base_url}/apartamentos/venda/rio-de-janeiro/"
-            f"?q={quote_plus(query)}"
-        )
+        listings: list[Listing] = []
+        seen_urls: set[str] = set()
+
+        queries = keywords or [""]
 
         async with self._build_session() as session:
-            html = await self._fetch(session, url)
+            for kw in queries:
+                url = f"{self.base_url}/apartamentos/venda/rio-de-janeiro/"
+                if kw:
+                    url += f"?q={quote_plus(kw)}"
+                html = await self._fetch(session, url)
+                self._parse_page(html, listings, seen_urls)
 
+        return listings
+
+    def _parse_page(
+        self,
+        html: str,
+        listings: list[Listing],
+        seen_urls: set[str],
+    ) -> None:
         soup = self._soup(html)
-        listings: list[Listing] = []
 
         for card in soup.select(".ui-search-layout__item")[:self.max_results]:
             title_el = card.select_one(
@@ -61,6 +72,11 @@ class MercadoLivreSource(BaseSource):
                     m = re.match(r"(\d[\d.]*)", txt)
                     area = m.group(1) if m else ""
 
+            if href and href in seen_urls:
+                continue
+            if href:
+                seen_urls.add(href)
+
             listings.append(Listing(
                 title=title_el.get_text(strip=True) if title_el else "",
                 price_brl=parse_price_brl(price_el.get_text(strip=True) if price_el else ""),
@@ -71,4 +87,3 @@ class MercadoLivreSource(BaseSource):
                 url=href,
                 source=self.name,
             ))
-        return listings

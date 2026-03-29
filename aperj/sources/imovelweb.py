@@ -14,16 +14,27 @@ class ImovelWebSource(BaseSource):
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
         base_path = f"{self.base_url}/apartamentos-venda-rio-de-janeiro-rj"
-        if keywords:
-            query = "-".join(keywords)
-            url = f"{base_path}-q-{quote_plus(query)}.html"
-        else:
-            url = f"{base_path}.html"
+        queries = keywords or [""]
+        all_listings: list[Listing] = []
+        seen_urls: set[str] = set()
 
         async with self._build_session() as session:
-            html = await self._fetch(session, url)
+            for kw in queries:
+                if kw:
+                    url = f"{base_path}-q-{quote_plus(kw)}.html"
+                else:
+                    url = f"{base_path}.html"
+                html = await self._fetch(session, url)
+                soup = self._soup(html)
+                batch = self._parse_page(soup)
+                for listing in batch:
+                    if listing.url not in seen_urls:
+                        seen_urls.add(listing.url)
+                        all_listings.append(listing)
 
-        soup = self._soup(html)
+        return all_listings
+
+    def _parse_page(self, soup: "BeautifulSoup") -> list[Listing]:  # type: ignore[name-defined]
         listings: list[Listing] = []
 
         for card in soup.select(

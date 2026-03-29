@@ -18,6 +18,8 @@ from aperj.sources.nuroa import NuroaSource
 from aperj.sources.olx import OlxSource
 from aperj.sources.patrimovel import PatrimovelSource
 from aperj.sources.portalrjimoveis import PortalRJImoveisSource
+from aperj.sources.privilegioimoveis import PrivilegioImoveisSource
+from aperj.sources.quintoandar import QuintoAndarSource
 from aperj.sources.vivareal import VivaRealSource
 from aperj.sources.zapimoveis import ZapImoveisSource
 
@@ -37,6 +39,8 @@ ALL_SOURCE_CLASSES: list[type[BaseSource]] = [
     CyrelaSource,
     EvenSource,
     MrvSource,
+    PrivilegioImoveisSource,
+    QuintoAndarSource,
 ]
 
 

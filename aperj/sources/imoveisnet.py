@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 from urllib.parse import quote_plus
 
 from aperj.models import Listing, parse_price_brl
@@ -14,16 +15,24 @@ class ImoveisNetSource(BaseSource):
     base_url = "https://www.imoveis.net"
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
-        query = " ".join(keywords)
-        url = (
-            f"{self.base_url}/rio-de-janeiro/venda"
-            f"?q={quote_plus(query)}"
-        )
+        queries = keywords or [""]
+        all_listings: list[Listing] = []
+        seen_urls: set[str] = set()
 
         async with self._build_session() as session:
-            html = await self._fetch(session, url)
+            for kw in queries:
+                url = f"{self.base_url}/rio-de-janeiro/venda?q={quote_plus(kw)}"
+                html = await self._fetch(session, url)
+                soup = self._soup(html)
+                batch = self._parse_page(soup)
+                for listing in batch:
+                    if listing.url not in seen_urls:
+                        seen_urls.add(listing.url)
+                        all_listings.append(listing)
 
-        soup = self._soup(html)
+        return all_listings
+
+    def _parse_page(self, soup: Any) -> list[Listing]:
         listings: list[Listing] = []
 
         for card in soup.select(

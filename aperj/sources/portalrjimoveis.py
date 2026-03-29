@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 from urllib.parse import quote_plus
 
 from aperj.models import Listing, parse_price_brl
@@ -15,25 +16,39 @@ class PortalRJImoveisSource(BaseSource):
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
         categoria = "apartamento"
+        bairro_keywords: list[str] = []
         for kw in keywords:
             low = kw.lower()
             if "cobertura" in low:
                 categoria = "cobertura"
-                break
-            if "flat" in low:
+            elif "flat" in low:
                 categoria = "flat"
-                break
+            else:
+                bairro_keywords.append(kw)
 
-        url = (
+        base_url = (
             f"{self.base_url}/busca-imoveis.html"
             f"?finalidade=venda&categoria={quote_plus(categoria)}"
             f"&cidade=rio+de+janeiro&estado=rj"
         )
+        bairro_queries = bairro_keywords or [""]
+        all_listings: list[Listing] = []
+        seen_urls: set[str] = set()
 
         async with self._build_session() as session:
-            html = await self._fetch(session, url)
+            for bairro in bairro_queries:
+                url = f"{base_url}&bairro={quote_plus(bairro)}" if bairro else base_url
+                html = await self._fetch(session, url)
+                soup = self._soup(html)
+                batch = self._parse_page(soup)
+                for listing in batch:
+                    if listing.url not in seen_urls:
+                        seen_urls.add(listing.url)
+                        all_listings.append(listing)
 
-        soup = self._soup(html)
+        return all_listings
+
+    def _parse_page(self, soup: Any) -> list[Listing]:
         listings: list[Listing] = []
 
         for card in soup.select(".card")[:self.max_results]:
@@ -74,10 +89,20 @@ class PortalRJImoveisSource(BaseSource):
                 if href.startswith("/") or not href.startswith("http"):
                     href = self.base_url + "/" + href.lstrip("/")
 
+            # Parse neighbourhood from address like
+            # "Rua Sorocaba - Botafogo, Rio de Janeiro - RJ"
+            neighborhood = ""
+            if address:
+                parts = address.split(" - ")
+                if len(parts) >= 2:
+                    # second part is "Botafogo, Rio de Janeiro" or just "Botafogo"
+                    neighborhood = parts[1].split(",")[0].strip()
+
             listings.append(Listing(
                 title=title,
                 price_brl=parse_price_brl(price),
                 address=address,
+                neighborhood=neighborhood,
                 area_m2=area_val,
                 bedrooms=bedrooms,
                 parking_spots=parking,

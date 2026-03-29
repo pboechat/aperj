@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 from urllib.parse import quote_plus
 
 from aperj.models import Listing, parse_price_brl
@@ -15,16 +16,24 @@ class NestoriaSource(BaseSource):
 
     async def _do_scrape(self, keywords: list[str]) -> list[Listing]:
         path = "/rio-de-janeiro/comprar"
-        if keywords:
-            query = "+".join(quote_plus(k) for k in keywords)
-            url = f"{self.base_url}{path}?q={query}"
-        else:
-            url = f"{self.base_url}{path}"
+        queries = keywords or [""]
+        all_listings: list[Listing] = []
+        seen_urls: set[str] = set()
 
         async with self._build_session() as session:
-            html = await self._fetch(session, url)
+            for kw in queries:
+                url = f"{self.base_url}{path}?q={quote_plus(kw)}" if kw else f"{self.base_url}{path}"
+                html = await self._fetch(session, url)
+                soup = self._soup(html)
+                batch = self._parse_page(soup)
+                for listing in batch:
+                    if listing.url not in seen_urls:
+                        seen_urls.add(listing.url)
+                        all_listings.append(listing)
 
-        soup = self._soup(html)
+        return all_listings
+
+    def _parse_page(self, soup: Any) -> list[Listing]:
         listings: list[Listing] = []
 
         for item in soup.select("ul[class*='result'] > li")[: self.max_results]:

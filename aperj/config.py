@@ -40,6 +40,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "cyrela": {"enabled": True},
         "even": {"enabled": True},
         "mrv": {"enabled": False},  # fully client-rendered SPA, no server-side data
+        "privilegioimoveis": {"enabled": True},
+        "quintoandar": {"enabled": True},
     },
     "auth": {},
 }
