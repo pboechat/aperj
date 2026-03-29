@@ -25,7 +25,7 @@
 > search for apartments in **any location in Brazil**. Just edit `config.yml` to change
 > the `region` field (e.g. `"São Paulo, SP"`), disable sources that are exclusive to Rio
 > (such as `portalrjimoveis`, `judicearaujo`, or `patrimovel`), and optionally add
-> real-estate source modules for your state. That's it — the nationwide sources (ZAP,
+> real-estate source modules for your state. That's it - the nationwide sources (ZAP,
 > VivaReal, OLX, Mercado Livre, …) will work anywhere.
 
 ## Supported Sources
@@ -194,7 +194,7 @@ aperj --min-price 400000 --max-price 700000 --min-bedrooms 2 --max-bedrooms 3
 ```
 
 > **Note:** Filters are applied *after* scraping. Listings where the filtered field is
-> unknown (`None`) are excluded — if a source doesn't report an area, for instance,
+> unknown (`None`) are excluded - if a source doesn't report an area, for instance,
 > `--min-area-m2` will drop those listings.
 
 ## Authentication & Cookies
@@ -247,8 +247,8 @@ class MySiteSource(BaseSource):
 
 Some sources (notably **ImovelWeb**) are behind Cloudflare managed challenges that block automated requests. When `aperj` encounters a 403 response it already tries two levels of fallback automatically:
 
-1. **aiohttp** — standard HTTP request
-2. **curl_cffi** — retries with a real browser TLS fingerprint (bypasses basic bot detection)
+1. **aiohttp** - standard HTTP request
+2. **curl_cffi** - retries with a real browser TLS fingerprint (bypasses basic bot detection)
 
 However, sites with aggressive Cloudflare protection will block both approaches, especially from cloud/data-centre IPs. For these sources you need a third layer: **[FlareSolverr](https://github.com/FlareSolverr/FlareSolverr)**, a proxy server that runs a real browser to solve Cloudflare challenges on your behalf.
 
@@ -275,13 +275,13 @@ curl http://localhost:8191/
 
 You can point `aperj` at your FlareSolverr instance in two ways:
 
-**Option 1 — CLI flag (one-off):**
+**Option 1 - CLI flag (one-off):**
 
 ```bash
 aperj --flaresolverr http://localhost:8191/v1
 ```
 
-**Option 2 — Configuration file (persistent):**
+**Option 2 - Configuration file (persistent):**
 
 Add the `flaresolverr_url` key to `~/.config/aperj/config.yml`:
 
@@ -291,8 +291,8 @@ flaresolverr_url: "http://localhost:8191/v1"
 
 With FlareSolverr configured, the fallback chain becomes:
 
-1. **aiohttp** → 403? →
-2. **curl_cffi** (TLS impersonation) → still 403? →
+1. **aiohttp** -> 403? ->
+2. **curl_cffi** (TLS impersonation) -> still 403? ->
 3. **FlareSolverr** (real browser solves the challenge)
 
 Without FlareSolverr configured, Cloudflare-protected sources will simply fail gracefully and the remaining sources will continue to work normally.

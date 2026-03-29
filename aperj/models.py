@@ -36,7 +36,7 @@ class Listing:
     Monetary fields (``price_brl``, ``condo_fee_brl``, ``iptu_brl``) store
     values in **centavos** (integer) so arithmetic is lossless.  A value of
     ``None`` means the information was not available.  The helper
-    ``format_brl`` converts centavos → human-readable ``R$ …`` strings.
+    ``format_brl`` converts centavos -> human-readable ``R$ …`` strings.
     """
 
     # ── identity ──────────────────────────────────────────────────────
