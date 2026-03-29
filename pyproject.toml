@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aperj"
+version = "0.1.0"
+description = "Apê RJ - apartment/flat listings scraper for Rio de Janeiro"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "aperj contributors" }]
+keywords = ["scraper", "real-estate", "rio-de-janeiro", "apartments"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+dependencies = [
+    "aiohttp>=3.9",
+    "Brotli>=1.1",
+    "beautifulsoup4>=4.12",
+    "curl_cffi>=0.7",
+    "lxml>=5.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=3.6",
+    "autopep8>=2.0",
+    "isort>=5.13",
+]
+
+[project.scripts]
+aperj = "aperj.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["aperj*"]
+
+[tool.isort]
+profile = "black"
+line_length = 99
